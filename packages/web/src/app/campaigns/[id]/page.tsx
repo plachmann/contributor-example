@@ -1,0 +1,168 @@
+"use client";
+
+import { useParams, useRouter } from "next/navigation";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { toast } from "sonner";
+import { useAuth } from "@/lib/auth";
+import { apiFetch } from "@/lib/api";
+import { fireConfetti } from "@/lib/confetti";
+import { BudgetMeter } from "@/components/budget-meter";
+import { CoworkerPicker } from "@/components/coworker-picker";
+import { GiftForm } from "@/components/gift-form";
+import { GiftCard } from "@/components/gift-card";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
+
+interface Campaign {
+  id: string;
+  title: string;
+  budgetPerUser: number;
+  openDate: string;
+  closeDate: string;
+  totalGifted: number;
+  remainingBudget: number;
+}
+
+interface Coworker {
+  id: string;
+  displayName: string;
+  avatarUrl: string | null;
+}
+
+interface Gift {
+  id: string;
+  amount: number;
+  comment: string;
+  recipient: { id: string; displayName: string; avatarUrl: string | null };
+}
+
+export default function CampaignPage() {
+  const { id } = useParams<{ id: string }>();
+  const { user } = useAuth();
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const [selectedCoworker, setSelectedCoworker] = useState<string | null>(null);
+
+  const { data: campaign } = useQuery({
+    queryKey: ["campaign", id],
+    queryFn: () => apiFetch<Campaign>(`/campaigns/${id}`),
+    enabled: !!user,
+  });
+
+  const { data: coworkers } = useQuery({
+    queryKey: ["participants", id],
+    queryFn: () => apiFetch<Coworker[]>(`/campaigns/${id}/participants`),
+    enabled: !!user,
+  });
+
+  const { data: gifts } = useQuery({
+    queryKey: ["gifts", id],
+    queryFn: () => apiFetch<Gift[]>(`/campaigns/${id}/gifts`),
+    enabled: !!user,
+  });
+
+  const isOpen = campaign
+    ? new Date() >= new Date(campaign.openDate) && new Date() <= new Date(campaign.closeDate)
+    : false;
+
+  const giftedIds = new Set(gifts?.map((g) => g.recipient.id) || []);
+  const selectedName = coworkers?.find((c) => c.id === selectedCoworker)?.displayName || null;
+
+  const createGift = useMutation({
+    mutationFn: (data: { recipientId: string; amount: number; comment: string }) =>
+      apiFetch(`/campaigns/${id}/gifts`, { method: "POST", body: JSON.stringify(data) }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["gifts", id] });
+      queryClient.invalidateQueries({ queryKey: ["campaign", id] });
+      setSelectedCoworker(null);
+      fireConfetti();
+      toast.success("Gift sent!");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const deleteGift = useMutation({
+    mutationFn: (giftId: string) =>
+      apiFetch(`/campaigns/${id}/gifts/${giftId}`, { method: "DELETE" }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["gifts", id] });
+      queryClient.invalidateQueries({ queryKey: ["campaign", id] });
+      toast.success("Gift removed");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  if (!campaign) return null;
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50">
+      <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-10">
+        <div className="max-w-5xl mx-auto px-6 py-4 flex items-center gap-4">
+          <Link href="/">
+            <Button variant="ghost" size="sm">&larr; Back</Button>
+          </Link>
+          <h1 className="text-xl font-bold">{campaign.title}</h1>
+          <Link href={`/campaigns/${id}/received`} className="ml-auto">
+            <Button variant="outline" size="sm">Received Gifts</Button>
+          </Link>
+        </div>
+      </header>
+
+      <main className="max-w-5xl mx-auto px-6 py-8 space-y-8">
+        <BudgetMeter budget={campaign.budgetPerUser} spent={campaign.totalGifted} />
+
+        <div className="grid md:grid-cols-2 gap-8">
+          <div>
+            <h2 className="text-lg font-semibold mb-4">Coworkers</h2>
+            <CoworkerPicker
+              coworkers={coworkers || []}
+              giftedIds={giftedIds}
+              selectedId={selectedCoworker}
+              onSelect={setSelectedCoworker}
+            />
+          </div>
+
+          <div>
+            <h2 className="text-lg font-semibold mb-4">
+              {isOpen ? "Send a Gift" : "Campaign Closed"}
+            </h2>
+            {isOpen ? (
+              <GiftForm
+                recipientName={selectedName}
+                remainingBudget={campaign.remainingBudget}
+                onSubmit={async (amount, comment) => {
+                  if (!selectedCoworker) return;
+                  await createGift.mutateAsync({
+                    recipientId: selectedCoworker,
+                    amount,
+                    comment,
+                  });
+                }}
+              />
+            ) : (
+              <p className="text-muted-foreground">This campaign is no longer accepting gifts.</p>
+            )}
+          </div>
+        </div>
+
+        {gifts && gifts.length > 0 && (
+          <div>
+            <h2 className="text-lg font-semibold mb-4">Your Gifts ({gifts.length})</h2>
+            <div className="space-y-3">
+              {gifts.map((gift) => (
+                <GiftCard
+                  key={gift.id}
+                  gift={gift}
+                  campaignOpen={isOpen}
+                  onEdit={() => setSelectedCoworker(gift.recipient.id)}
+                  onDelete={() => deleteGift.mutate(gift.id)}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+      </main>
+    </div>
+  );
+}
