@@ -77,8 +77,7 @@ contributor-example/
 │   │   │   ├── routes/         # Route handlers
 │   │   │   ├── middleware/     # Auth, validation, errors
 │   │   │   ├── schemas/       # Zod validation schemas
-│   │   │   ├── lib/           # Prisma client, errors
-│   │   │   └── index.ts       # Express app entry
+│   │   │   └── lib/           # Prisma client, errors
 │   │   └── prisma/
 │   │       ├── schema.prisma  # Database schema
 │   │       └── seed.ts        # Seed data
