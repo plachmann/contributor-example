@@ -1,0 +1,72 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String   @id @default(uuid()) @db.Uuid
+  email       String   @unique
+  displayName String   @map("display_name")
+  avatarUrl   String?  @map("avatar_url")
+  isAdmin     Boolean  @default(false) @map("is_admin")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  createdCampaigns Campaign[]
+  participations   CampaignParticipant[]
+  givenGifts       Gift[]                @relation("GiverGifts")
+  receivedGifts    Gift[]                @relation("RecipientGifts")
+
+  @@map("users")
+}
+
+model Campaign {
+  id           String   @id @default(uuid()) @db.Uuid
+  title        String
+  description  String?
+  budgetPerUser Int     @map("budget_per_user")
+  openDate     DateTime @map("open_date")
+  closeDate    DateTime @map("close_date")
+  createdBy    String   @map("created_by") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  creator      User                  @relation(fields: [createdBy], references: [id])
+  participants CampaignParticipant[]
+  gifts        Gift[]
+
+  @@map("campaigns")
+}
+
+model CampaignParticipant {
+  id         String   @id @default(uuid()) @db.Uuid
+  campaignId String   @map("campaign_id") @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  campaign Campaign @relation(fields: [campaignId], references: [id])
+  user     User     @relation(fields: [userId], references: [id])
+
+  @@unique([campaignId, userId])
+  @@map("campaign_participants")
+}
+
+model Gift {
+  id          String   @id @default(uuid()) @db.Uuid
+  campaignId  String   @map("campaign_id") @db.Uuid
+  giverId     String   @map("giver_id") @db.Uuid
+  recipientId String   @map("recipient_id") @db.Uuid
+  amount      Int
+  comment     String
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  campaign  Campaign @relation(fields: [campaignId], references: [id])
+  giver     User     @relation("GiverGifts", fields: [giverId], references: [id])
+  recipient User     @relation("RecipientGifts", fields: [recipientId], references: [id])
+
+  @@unique([campaignId, giverId, recipientId])
+  @@map("gifts")
+}
