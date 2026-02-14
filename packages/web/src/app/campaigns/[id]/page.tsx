@@ -68,17 +68,30 @@ export default function CampaignPage() {
 
   const giftedIds = new Set(gifts?.map((g) => g.recipient.id) || []);
   const selectedName = coworkers?.find((c) => c.id === selectedCoworker)?.displayName || null;
+  const existingGift = gifts?.find((g) => g.recipient.id === selectedCoworker) || null;
+
+  const onMutationSuccess = (message: string) => {
+    queryClient.invalidateQueries({ queryKey: ["gifts", id] });
+    queryClient.invalidateQueries({ queryKey: ["campaign", id] });
+    setSelectedCoworker(null);
+    fireConfetti();
+    toast.success(message);
+  };
 
   const createGift = useMutation({
     mutationFn: (data: { recipientId: string; amount: number; comment: string }) =>
       apiFetch(`/campaigns/${id}/gifts`, { method: "POST", body: JSON.stringify(data) }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["gifts", id] });
-      queryClient.invalidateQueries({ queryKey: ["campaign", id] });
-      setSelectedCoworker(null);
-      fireConfetti();
-      toast.success("Gift sent!");
-    },
+    onSuccess: () => onMutationSuccess("Gift sent!"),
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const updateGift = useMutation({
+    mutationFn: (data: { giftId: string; amount: number; comment: string }) =>
+      apiFetch(`/campaigns/${id}/gifts/${data.giftId}`, {
+        method: "PUT",
+        body: JSON.stringify({ amount: data.amount, comment: data.comment }),
+      }),
+    onSuccess: () => onMutationSuccess("Gift updated!"),
     onError: (err: Error) => toast.error(err.message),
   });
 
@@ -129,15 +142,27 @@ export default function CampaignPage() {
             </h2>
             {isOpen ? (
               <GiftForm
+                key={selectedCoworker}
                 recipientName={selectedName}
                 remainingBudget={campaign.remainingBudget}
+                initialAmount={existingGift?.amount}
+                initialComment={existingGift?.comment}
+                isEdit={!!existingGift}
                 onSubmit={async (amount, comment) => {
                   if (!selectedCoworker) return;
-                  await createGift.mutateAsync({
-                    recipientId: selectedCoworker,
-                    amount,
-                    comment,
-                  }).catch(() => {});
+                  if (existingGift) {
+                    await updateGift.mutateAsync({
+                      giftId: existingGift.id,
+                      amount,
+                      comment,
+                    }).catch(() => {});
+                  } else {
+                    await createGift.mutateAsync({
+                      recipientId: selectedCoworker,
+                      amount,
+                      comment,
+                    }).catch(() => {});
+                  }
                 }}
               />
             ) : (
