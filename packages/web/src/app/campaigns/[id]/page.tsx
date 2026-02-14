@@ -137,7 +137,7 @@ export default function CampaignPage() {
                     recipientId: selectedCoworker,
                     amount,
                     comment,
-                  });
+                  }).catch(() => {});
                 }}
               />
             ) : (
