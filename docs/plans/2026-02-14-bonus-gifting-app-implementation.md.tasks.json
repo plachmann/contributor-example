@@ -1,0 +1,26 @@
+{
+  "planPath": "docs/plans/2026-02-14-bonus-gifting-app-implementation.md",
+  "tasks": [
+    {"id": 6, "subject": "Task 1: Initialize monorepo and root configuration", "status": "pending"},
+    {"id": 7, "subject": "Task 2: Docker Compose and environment", "status": "pending", "blockedBy": [6]},
+    {"id": 8, "subject": "Task 3: API package scaffold", "status": "pending", "blockedBy": [6, 7]},
+    {"id": 9, "subject": "Task 4: Prisma schema and migration", "status": "pending", "blockedBy": [8]},
+    {"id": 10, "subject": "Task 5: Prisma client helper and seed script", "status": "pending", "blockedBy": [9]},
+    {"id": 11, "subject": "Task 6: Error handling and validation middleware", "status": "pending", "blockedBy": [8]},
+    {"id": 12, "subject": "Task 7: Auth middleware (JWT) with tests", "status": "pending", "blockedBy": [11]},
+    {"id": 13, "subject": "Task 8: Auth routes (OAuth + dev-login)", "status": "pending", "blockedBy": [12]},
+    {"id": 14, "subject": "Task 9: Campaign routes with tests", "status": "pending", "blockedBy": [11, 13]},
+    {"id": 15, "subject": "Task 10: Participant routes (CSV import + list)", "status": "pending", "blockedBy": [11, 13]},
+    {"id": 16, "subject": "Task 11: Gift routes with tests", "status": "pending", "blockedBy": [15, 13]},
+    {"id": 17, "subject": "Task 12: Report routes", "status": "pending", "blockedBy": [16]},
+    {"id": 18, "subject": "Task 13: Web package scaffold", "status": "pending", "blockedBy": [8]},
+    {"id": 19, "subject": "Task 14: Login page and auth callback", "status": "pending", "blockedBy": [18]},
+    {"id": 20, "subject": "Task 15: Dashboard page", "status": "pending", "blockedBy": [18]},
+    {"id": 21, "subject": "Task 16: Gifting page", "status": "pending", "blockedBy": [19, 20]},
+    {"id": 22, "subject": "Task 17: Received gifts page", "status": "pending", "blockedBy": [21]},
+    {"id": 23, "subject": "Task 18: Admin pages", "status": "pending", "blockedBy": [18]},
+    {"id": 24, "subject": "Task 19: Developer setup documentation", "status": "pending"},
+    {"id": 25, "subject": "Task 20: API spec and schema diagram", "status": "pending", "blockedBy": [9]}
+  ],
+  "lastUpdated": "2026-02-14T00:00:00Z"
+}
