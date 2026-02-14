@@ -27,8 +27,10 @@ app.use("/api/v1/campaigns/:id/reports", reportRoutes);
 // Error handler must be last
 app.use(errorHandler);
 
-app.listen(port, () => {
-  console.log(`API running on http://localhost:${port}`);
-});
+if (process.env.NODE_ENV !== "test") {
+  app.listen(port, () => {
+    console.log(`API running on http://localhost:${port}`);
+  });
+}
 
 export default app;
