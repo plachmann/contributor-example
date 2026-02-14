@@ -62,3 +62,15 @@ Use `POST /api/v1/auth/dev-login` with `{ "email": "admin@example.com" }` for lo
 ## Testing
 
 API tests use vitest + supertest. Test files in `packages/api/src/__tests__/`. Tests require a running Postgres instance (`docker compose up -d`).
+
+```bash
+# Run a single test file
+cd packages/api && DATABASE_URL="postgresql://gifting:gifting@localhost:5432/gifting" pnpm vitest run src/__tests__/routes/gifts.test.ts
+```
+
+## Gotchas
+
+- **Env loading**: The API loads `../../.env` via dotenv in `src/index.ts`. Prisma CLI commands need `DATABASE_URL` passed explicitly or a `.env` in `packages/api/`.
+- **Tests wipe DB**: Integration tests clear all tables in beforeAll/afterAll. Re-seed after running tests: `DATABASE_URL=... npx prisma db seed`
+- **apiFetch and file uploads**: `apiFetch()` always sets `Content-Type: application/json`. For file uploads (CSV import), use raw `fetch` instead.
+- **express-async-errors**: Imported at top of `index.ts` — errors thrown in async route handlers are automatically caught by the error handler middleware.
