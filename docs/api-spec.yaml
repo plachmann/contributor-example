@@ -1,0 +1,537 @@
+openapi: 3.0.3
+info:
+  title: Bonus Gifting API
+  description: API for the peer bonus gifting application
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:3001/api/v1
+    description: Local development
+
+security:
+  - BearerAuth: []
+
+paths:
+  /auth/login:
+    get:
+      tags: [Authentication]
+      summary: Redirect to OAuth provider
+      security: []
+      responses:
+        "302":
+          description: Redirects to Google OAuth consent screen
+
+  /auth/callback:
+    get:
+      tags: [Authentication]
+      summary: OAuth callback
+      security: []
+      parameters:
+        - name: code
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "302":
+          description: Redirects to frontend with JWT token in query string
+
+  /auth/me:
+    get:
+      tags: [Authentication]
+      summary: Get current user profile
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /auth/dev-login:
+    post:
+      tags: [Authentication]
+      summary: Dev-only login by email (local development)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        "200":
+          description: JWT token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+        "404":
+          description: User not found
+
+  /campaigns:
+    get:
+      tags: [Campaigns]
+      summary: List campaigns the user participates in
+      responses:
+        "200":
+          description: List of campaigns
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Campaign"
+    post:
+      tags: [Campaigns]
+      summary: Create a new campaign (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCampaign"
+      responses:
+        "201":
+          description: Created campaign
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Campaign"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /campaigns/{id}:
+    get:
+      tags: [Campaigns]
+      summary: Get campaign details with user's budget info
+      parameters:
+        - $ref: "#/components/parameters/CampaignId"
+      responses:
+        "200":
+          description: Campaign with budget details
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Campaign"
+                  - type: object
+                    properties:
+                      totalGifted:
+                        type: integer
+                        description: Amount user has gifted (cents)
+                      remainingBudget:
+                        type: integer
+                        description: Remaining budget for user (cents)
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /campaigns/{id}/status:
+    get:
+      tags: [Campaigns]
+      summary: Campaign participation status (admin only)
+      parameters:
+        - $ref: "#/components/parameters/CampaignId"
+      responses:
+        "200":
+          description: Campaign status with per-participant breakdown
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  campaign:
+                    $ref: "#/components/schemas/Campaign"
+                  participantStatus:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        user:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                              format: uuid
+                            email:
+                              type: string
+                            displayName:
+                              type: string
+                        totalGifted:
+                          type: integer
+                        giftCount:
+                          type: integer
+                        remainingBudget:
+                          type: integer
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /campaigns/{id}/participants:
+    get:
+      tags: [Participants]
+      summary: List campaign participants (excludes current user)
+      parameters:
+        - $ref: "#/components/parameters/CampaignId"
+      responses:
+        "200":
+          description: List of participants
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    displayName:
+                      type: string
+                    avatarUrl:
+                      type: string
+                      nullable: true
+
+  /campaigns/{id}/participants/import:
+    post:
+      tags: [Participants]
+      summary: Import participants via CSV (admin only)
+      parameters:
+        - $ref: "#/components/parameters/CampaignId"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: "CSV file with columns: email,display_name"
+      responses:
+        "200":
+          description: Import results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  usersProcessed:
+                    type: integer
+                  participantsAdded:
+                    type: integer
+                  errors:
+                    type: array
+                    items:
+                      type: string
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /campaigns/{id}/gifts:
+    get:
+      tags: [Gifts]
+      summary: List gifts the current user has given in this campaign
+      parameters:
+        - $ref: "#/components/parameters/CampaignId"
+      responses:
+        "200":
+          description: List of gifts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Gift"
+    post:
+      tags: [Gifts]
+      summary: Create a gift
+      parameters:
+        - $ref: "#/components/parameters/CampaignId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateGift"
+      responses:
+        "201":
+          description: Created gift
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Gift"
+        "400":
+          description: Budget exceeded, campaign closed, or self-gift
+
+  /campaigns/{id}/gifts/received:
+    get:
+      tags: [Gifts]
+      summary: List gifts received by current user (anonymous - no giver info)
+      parameters:
+        - $ref: "#/components/parameters/CampaignId"
+      responses:
+        "200":
+          description: List of received gifts (anonymous)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    amount:
+                      type: integer
+                      description: Amount in cents
+                    comment:
+                      type: string
+                    createdAt:
+                      type: string
+                      format: date-time
+
+  /campaigns/{id}/gifts/{giftId}:
+    put:
+      tags: [Gifts]
+      summary: Update a gift's amount and/or comment
+      parameters:
+        - $ref: "#/components/parameters/CampaignId"
+        - $ref: "#/components/parameters/GiftId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateGift"
+      responses:
+        "200":
+          description: Updated gift
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Gift"
+        "400":
+          description: Budget exceeded or campaign closed
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Gifts]
+      summary: Delete a gift
+      parameters:
+        - $ref: "#/components/parameters/CampaignId"
+        - $ref: "#/components/parameters/GiftId"
+      responses:
+        "204":
+          description: Gift deleted
+        "400":
+          description: Campaign closed
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /campaigns/{id}/reports/summary:
+    get:
+      tags: [Reports]
+      summary: Campaign summary report (admin only)
+      parameters:
+        - $ref: "#/components/parameters/CampaignId"
+      responses:
+        "200":
+          description: Summary statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  totalParticipants:
+                    type: integer
+                  participantsWhoGifted:
+                    type: integer
+                  participationRate:
+                    type: number
+                    description: "0.0 to 1.0"
+                  totalAmountGifted:
+                    type: integer
+                    description: Total in cents
+                  averageGiftAmount:
+                    type: integer
+                    description: Average in cents
+                  totalGiftsCount:
+                    type: integer
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    CampaignId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    GiftId:
+      name: giftId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        displayName:
+          type: string
+        avatarUrl:
+          type: string
+          nullable: true
+        isAdmin:
+          type: boolean
+
+    Campaign:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        budgetPerUser:
+          type: integer
+          description: Budget in cents
+        openDate:
+          type: string
+          format: date-time
+        closeDate:
+          type: string
+          format: date-time
+
+    CreateCampaign:
+      type: object
+      required: [title, budgetPerUser, openDate, closeDate]
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        budgetPerUser:
+          type: integer
+          description: Budget in cents
+          minimum: 1
+        openDate:
+          type: string
+          format: date-time
+        closeDate:
+          type: string
+          format: date-time
+
+    Gift:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        amount:
+          type: integer
+          description: Amount in cents
+        comment:
+          type: string
+        recipient:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            displayName:
+              type: string
+            avatarUrl:
+              type: string
+              nullable: true
+
+    CreateGift:
+      type: object
+      required: [recipientId, amount, comment]
+      properties:
+        recipientId:
+          type: string
+          format: uuid
+        amount:
+          type: integer
+          minimum: 1
+          description: Amount in cents
+        comment:
+          type: string
+          minLength: 1
+          maxLength: 1000
+
+    UpdateGift:
+      type: object
+      properties:
+        amount:
+          type: integer
+          minimum: 1
+          description: Amount in cents
+        comment:
+          type: string
+          minLength: 1
+          maxLength: 1000
+
+  responses:
+    Unauthorized:
+      description: Missing or invalid authentication token
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    Forbidden:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
