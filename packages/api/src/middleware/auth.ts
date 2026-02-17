@@ -1,8 +1,7 @@
 import { Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { AuthRequest, AuthUser } from "../types.js";
-
-const JWT_SECRET = process.env.JWT_SECRET || "change-me";
+import { JWT_SECRET } from "../lib/jwt.js";
 
 export function requireAuth(req: AuthRequest, res: Response, next: NextFunction) {
   const header = req.headers.authorization;

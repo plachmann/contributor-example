@@ -3,9 +3,9 @@ import jwt from "jsonwebtoken";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "../middleware/auth.js";
 import { AuthRequest } from "../types.js";
+import { JWT_SECRET } from "../lib/jwt.js";
 
 const router = Router();
-const JWT_SECRET = process.env.JWT_SECRET || "change-me";
 
 // Google OAuth redirect
 router.get("/login", (_req: Request, res: Response) => {
@@ -44,12 +44,22 @@ router.get("/callback", async (req: Request, res: Response) => {
         grant_type: "authorization_code",
       }),
     });
+    if (!tokenRes.ok) {
+      console.error("OAuth token exchange failed:", tokenRes.status);
+      res.status(502).json({ error: "Authentication failed" });
+      return;
+    }
     const tokens = await tokenRes.json();
 
     // Get user info
     const userInfoRes = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
       headers: { Authorization: `Bearer ${tokens.access_token}` },
     });
+    if (!userInfoRes.ok) {
+      console.error("OAuth user info fetch failed:", userInfoRes.status);
+      res.status(502).json({ error: "Authentication failed" });
+      return;
+    }
     const userInfo = await userInfoRes.json();
 
     // Find user in our DB (must be pre-imported by admin)

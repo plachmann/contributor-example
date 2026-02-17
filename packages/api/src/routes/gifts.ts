@@ -1,4 +1,5 @@
 import { Router, Response } from "express";
+import { Prisma, PrismaClient } from "@prisma/client";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "../middleware/auth.js";
 import { validate } from "../middleware/validate.js";
@@ -6,10 +7,12 @@ import { createGiftSchema, updateGiftSchema } from "../schemas/gift.js";
 import { AuthRequest } from "../types.js";
 import { BadRequestError, NotFoundError, ForbiddenError } from "../lib/errors.js";
 
+type TxClient = Omit<PrismaClient, "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends">;
+
 const router = Router({ mergeParams: true });
 
-async function assertCampaignOpen(campaignId: string) {
-  const campaign = await prisma.campaign.findUnique({ where: { id: campaignId } });
+async function assertCampaignOpen(campaignId: string, client: TxClient = prisma) {
+  const campaign = await client.campaign.findUnique({ where: { id: campaignId } });
   if (!campaign) throw new NotFoundError("Campaign not found");
   const now = new Date();
   if (now < campaign.openDate || now > campaign.closeDate) {
@@ -18,21 +21,21 @@ async function assertCampaignOpen(campaignId: string) {
   return campaign;
 }
 
-async function assertParticipant(campaignId: string, userId: string) {
-  const p = await prisma.campaignParticipant.findUnique({
+async function assertParticipant(campaignId: string, userId: string, client: TxClient = prisma) {
+  const p = await client.campaignParticipant.findUnique({
     where: { campaignId_userId: { campaignId, userId } },
   });
   if (!p) throw new ForbiddenError("Not a participant in this campaign");
 }
 
-async function getRemainingBudget(campaignId: string, userId: string, excludeGiftId?: string) {
-  const campaign = await prisma.campaign.findUnique({ where: { id: campaignId } });
+async function getRemainingBudget(campaignId: string, userId: string, client: TxClient = prisma, excludeGiftId?: string) {
+  const campaign = await client.campaign.findUnique({ where: { id: campaignId } });
   if (!campaign) throw new NotFoundError("Campaign not found");
 
   const where: Record<string, unknown> = { campaignId, giverId: userId };
   if (excludeGiftId) where.id = { not: excludeGiftId };
 
-  const total = await prisma.gift.aggregate({ where: where as any, _sum: { amount: true } });
+  const total = await client.gift.aggregate({ where: where as any, _sum: { amount: true } });
   return campaign.budgetPerUser - (total._sum?.amount || 0);
 }
 
@@ -79,19 +82,21 @@ router.post(
 
     await assertParticipant(campaignId, recipientId);
 
-    const remaining = await getRemainingBudget(campaignId, userId);
-    if (amount > remaining) {
-      throw new BadRequestError(
-        `Amount exceeds remaining budget. You have $${(remaining / 100).toFixed(2)} left.`
-      );
-    }
+    const gift = await prisma.$transaction(async (tx) => {
+      const remaining = await getRemainingBudget(campaignId, userId, tx);
+      if (amount > remaining) {
+        throw new BadRequestError(
+          `Amount exceeds remaining budget. You have $${(remaining / 100).toFixed(2)} left.`
+        );
+      }
 
-    const gift = await prisma.gift.create({
-      data: { campaignId, giverId: userId, recipientId, amount, comment },
-      include: {
-        recipient: { select: { id: true, displayName: true, avatarUrl: true } },
-      },
-    });
+      return tx.gift.create({
+        data: { campaignId, giverId: userId, recipientId, amount, comment },
+        include: {
+          recipient: { select: { id: true, displayName: true, avatarUrl: true } },
+        },
+      });
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 
     res.status(201).json(gift);
   }
@@ -106,6 +111,7 @@ router.put(
     const campaignId = req.params.id as string;
     const giftId = req.params.giftId as string;
     const userId = req.user!.id;
+    const { amount, comment } = req.body;
 
     await assertCampaignOpen(campaignId);
 
@@ -114,22 +120,28 @@ router.put(
     if (existing.giverId !== userId) throw new ForbiddenError("Not your gift");
     if (existing.campaignId !== campaignId) throw new NotFoundError("Gift not in this campaign");
 
-    if (req.body.amount) {
-      const remaining = await getRemainingBudget(campaignId, userId, giftId);
-      if (req.body.amount > remaining) {
-        throw new BadRequestError(
-          `Amount exceeds remaining budget. You have $${(remaining / 100).toFixed(2)} left.`
-        );
+    const gift = await prisma.$transaction(async (tx) => {
+      if (amount !== undefined) {
+        const remaining = await getRemainingBudget(campaignId, userId, tx, giftId);
+        if (amount > remaining) {
+          throw new BadRequestError(
+            `Amount exceeds remaining budget. You have $${(remaining / 100).toFixed(2)} left.`
+          );
+        }
       }
-    }
 
-    const gift = await prisma.gift.update({
-      where: { id: giftId },
-      data: req.body,
-      include: {
-        recipient: { select: { id: true, displayName: true, avatarUrl: true } },
-      },
-    });
+      return tx.gift.update({
+        where: { id: giftId },
+        data: {
+          ...(amount !== undefined && { amount }),
+          ...(comment !== undefined && { comment }),
+        },
+        include: {
+          recipient: { select: { id: true, displayName: true, avatarUrl: true } },
+        },
+      });
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+
     res.json(gift);
   }
 );

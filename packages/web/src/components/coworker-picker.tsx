@@ -36,6 +36,7 @@ export function CoworkerPicker({ coworkers, giftedIds, selectedId, onSelect }: C
           <button
             key={c.id}
             onClick={() => onSelect(c.id)}
+            aria-label={`Select ${c.displayName}`}
             className={`w-full flex items-center gap-3 p-3 rounded-lg transition-colors text-left ${
               selectedId === c.id
                 ? "bg-orange-100 border-2 border-orange-300"

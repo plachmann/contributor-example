@@ -3,7 +3,7 @@ import { z } from "zod";
 export const createCampaignSchema = z.object({
   title: z.string().min(1).max(200),
   description: z.string().optional(),
-  budgetPerUser: z.number().int().positive(),
+  budgetPerUser: z.number().int().positive().max(10_000_000),
   openDate: z.coerce.date(),
   closeDate: z.coerce.date(),
 }).refine((data) => data.closeDate > data.openDate, {
