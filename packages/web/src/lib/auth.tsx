@@ -23,24 +23,23 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [token, setToken] = useState<string | null>(() =>
+    typeof window !== "undefined" ? localStorage.getItem("token") : null
+  );
+  const [isLoading, setIsLoading] = useState(() =>
+    typeof window !== "undefined" ? !!localStorage.getItem("token") : false
+  );
 
   useEffect(() => {
-    const stored = localStorage.getItem("token");
-    if (stored) {
-      setToken(stored);
-      apiFetch<User>("/auth/me")
-        .then(setUser)
-        .catch(() => {
-          localStorage.removeItem("token");
-          setToken(null);
-        })
-        .finally(() => setIsLoading(false));
-    } else {
-      setIsLoading(false);
-    }
-  }, []);
+    if (!token) return;
+    apiFetch<User>("/auth/me")
+      .then(setUser)
+      .catch(() => {
+        localStorage.removeItem("token");
+        setToken(null);
+      })
+      .finally(() => setIsLoading(false));
+  }, [token]);
 
   const login = async (newToken: string) => {
     localStorage.setItem("token", newToken);

@@ -35,6 +35,7 @@ async function getRemainingBudget(campaignId: string, userId: string, client: Tx
   const where: Record<string, unknown> = { campaignId, giverId: userId };
   if (excludeGiftId) where.id = { not: excludeGiftId };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const total = await client.gift.aggregate({ where: where as any, _sum: { amount: true } });
   return campaign.budgetPerUser - (total._sum?.amount || 0);
 }
