@@ -18,7 +18,8 @@ jobs:
           node-version: 20
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: npx prisma generate
+      - name: Generate Prisma client
+        run: pnpm exec prisma generate
         working-directory: packages/api
       - run: pnpm lint
 
@@ -33,7 +34,8 @@ jobs:
           node-version: 20
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: npx prisma generate
+      - name: Generate Prisma client
+        run: pnpm exec prisma generate
         working-directory: packages/api
       - run: pnpm build
         env:
@@ -65,10 +67,10 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: Generate Prisma client
-        run: npx prisma generate
+        run: pnpm exec prisma generate
         working-directory: packages/api
       - name: Run migrations
-        run: npx prisma migrate deploy
+        run: pnpm exec prisma migrate deploy
         working-directory: packages/api
         env:
           DATABASE_URL: postgresql://gifting:gifting@localhost:5432/gifting
