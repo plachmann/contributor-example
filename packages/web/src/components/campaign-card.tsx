@@ -4,18 +4,10 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import type { Campaign } from "@/lib/types";
 
 interface CampaignCardProps {
-  campaign: {
-    id: string;
-    title: string;
-    description: string | null;
-    budgetPerUser: number;
-    openDate: string;
-    closeDate: string;
-    totalGifted: number;
-    remainingBudget: number;
-  };
+  campaign: Campaign;
 }
 
 export function CampaignCard({ campaign }: CampaignCardProps) {

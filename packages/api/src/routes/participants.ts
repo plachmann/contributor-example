@@ -6,7 +6,7 @@ import { requireAuth, requireAdmin } from "../middleware/auth.js";
 import { AuthRequest } from "../types.js";
 
 const router = Router({ mergeParams: true });
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 1024 * 1024 } });
 
 // List participants (for coworker picker — excludes current user)
 router.get("/", requireAuth, async (req: AuthRequest, res: Response) => {

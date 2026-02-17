@@ -78,6 +78,38 @@ describe("Campaign routes", () => {
     expect(Array.isArray(res.body)).toBe(true);
   });
 
+  it("campaign list includes created campaign", async () => {
+    const res = await request(app)
+      .get("/api/v1/campaigns")
+      .set("Authorization", `Bearer ${adminToken}`);
+    expect(res.status).toBe(200);
+    const titles = res.body.map((c: any) => c.title);
+    expect(titles).toContain("Q4 Bonuses");
+  });
+
+  it("returns campaign details", async () => {
+    // First get the list to find a campaign ID
+    const listRes = await request(app)
+      .get("/api/v1/campaigns")
+      .set("Authorization", `Bearer ${adminToken}`);
+    const campaignId = listRes.body[0].id;
+
+    const res = await request(app)
+      .get(`/api/v1/campaigns/${campaignId}`)
+      .set("Authorization", `Bearer ${adminToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty("id");
+    expect(res.body).toHaveProperty("title");
+    expect(res.body).toHaveProperty("budgetPerUser");
+  });
+
+  it("returns 404 for non-existent campaign", async () => {
+    const res = await request(app)
+      .get("/api/v1/campaigns/00000000-0000-0000-0000-000000000099")
+      .set("Authorization", `Bearer ${adminToken}`);
+    expect(res.status).toBe(404);
+  });
+
   it("rejects unauthenticated requests", async () => {
     const res = await request(app).get("/api/v1/campaigns");
     expect(res.status).toBe(401);

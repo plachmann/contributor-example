@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -13,16 +13,7 @@ import { GiftForm } from "@/components/gift-form";
 import { GiftCard } from "@/components/gift-card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-
-interface Campaign {
-  id: string;
-  title: string;
-  budgetPerUser: number;
-  openDate: string;
-  closeDate: string;
-  totalGifted: number;
-  remainingBudget: number;
-}
+import type { Campaign } from "@/lib/types";
 
 interface Coworker {
   id: string;
@@ -40,11 +31,10 @@ interface Gift {
 export default function CampaignPage() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
-  const router = useRouter();
   const queryClient = useQueryClient();
   const [selectedCoworker, setSelectedCoworker] = useState<string | null>(null);
 
-  const { data: campaign } = useQuery({
+  const { data: campaign, isError, error } = useQuery({
     queryKey: ["campaign", id],
     queryFn: () => apiFetch<Campaign>(`/campaigns/${id}`),
     enabled: !!user,
@@ -106,6 +96,17 @@ export default function CampaignPage() {
     onError: (err: Error) => toast.error(err.message),
   });
 
+  if (isError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50">
+        <div className="text-center">
+          <p className="text-destructive font-medium">Something went wrong</p>
+          <p className="text-sm text-muted-foreground mt-1">{error?.message}</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!campaign) return null;
 
   return (
@@ -144,7 +145,7 @@ export default function CampaignPage() {
               <GiftForm
                 key={selectedCoworker}
                 recipientName={selectedName}
-                remainingBudget={campaign.remainingBudget}
+                remainingBudget={campaign.remainingBudget + (existingGift?.amount ?? 0)}
                 initialAmount={existingGift?.amount}
                 initialComment={existingGift?.comment}
                 isEdit={!!existingGift}
@@ -181,7 +182,12 @@ export default function CampaignPage() {
                   gift={gift}
                   campaignOpen={isOpen}
                   onEdit={() => setSelectedCoworker(gift.recipient.id)}
-                  onDelete={() => deleteGift.mutate(gift.id)}
+                  onDelete={() => {
+                    if (window.confirm("Are you sure you want to delete this gift?")) {
+                      deleteGift.mutate(gift.id);
+                    }
+                  }}
+                  isDeleting={deleteGift.isPending}
                 />
               ))}
             </div>

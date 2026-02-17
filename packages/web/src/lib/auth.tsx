@@ -14,7 +14,7 @@ interface User {
 interface AuthContextType {
   user: User | null;
   token: string | null;
-  login: (token: string) => void;
+  login: (token: string) => Promise<void>;
   logout: () => void;
   isLoading: boolean;
 }
@@ -42,10 +42,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const login = (newToken: string) => {
+  const login = async (newToken: string) => {
     localStorage.setItem("token", newToken);
     setToken(newToken);
-    apiFetch<User>("/auth/me").then(setUser);
+    try {
+      const userData = await apiFetch<User>("/auth/me");
+      setUser(userData);
+    } catch {
+      localStorage.removeItem("token");
+      setToken(null);
+      setUser(null);
+    }
   };
 
   const logout = () => {

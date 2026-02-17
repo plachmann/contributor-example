@@ -19,13 +19,24 @@ export default function ReceivedGiftsPage() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
 
-  const { data: gifts } = useQuery({
+  const { data: gifts, isError, error } = useQuery({
     queryKey: ["received-gifts", id],
     queryFn: () => apiFetch<ReceivedGift[]>(`/campaigns/${id}/gifts/received`),
     enabled: !!user,
   });
 
   const total = gifts?.reduce((sum, g) => sum + g.amount, 0) || 0;
+
+  if (isError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50">
+        <div className="text-center">
+          <p className="text-destructive font-medium">Something went wrong</p>
+          <p className="text-sm text-muted-foreground mt-1">{error?.message}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50">

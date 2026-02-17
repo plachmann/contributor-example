@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import jwt from "jsonwebtoken";
 import { requireAuth, requireAdmin } from "../../middleware/auth.js";
 
-const JWT_SECRET = "change-me";
+const JWT_SECRET = process.env.JWT_SECRET || "change-me";
 
 function mockReqResNext() {
   const req: any = { headers: {} };

@@ -18,9 +18,10 @@ interface GiftCardProps {
   onEdit: () => void;
   onDelete: () => void;
   campaignOpen: boolean;
+  isDeleting?: boolean;
 }
 
-export function GiftCard({ gift, onEdit, onDelete, campaignOpen }: GiftCardProps) {
+export function GiftCard({ gift, onEdit, onDelete, campaignOpen, isDeleting }: GiftCardProps) {
   return (
     <Card className="border-2 border-orange-50">
       <CardContent className="flex items-center gap-4 p-4">
@@ -41,9 +42,16 @@ export function GiftCard({ gift, onEdit, onDelete, campaignOpen }: GiftCardProps
         </div>
         {campaignOpen && (
           <div className="flex gap-1">
-            <Button variant="ghost" size="sm" onClick={onEdit}>Edit</Button>
-            <Button variant="ghost" size="sm" className="text-destructive" onClick={onDelete}>
-              Delete
+            <Button variant="ghost" size="sm" onClick={onEdit} aria-label="Edit gift">Edit</Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-destructive"
+              onClick={onDelete}
+              disabled={isDeleting}
+              aria-label="Delete gift"
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
             </Button>
           </div>
         )}

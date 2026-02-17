@@ -42,7 +42,7 @@ export default function CampaignStatusPage() {
   const { user } = useAuth();
   const fileInput = useRef<HTMLInputElement>(null);
 
-  const { data: status } = useQuery({
+  const { data: status, isError, error } = useQuery({
     queryKey: ["campaign-status", id],
     queryFn: () => apiFetch<CampaignStatus>(`/campaigns/${id}/status`),
     enabled: !!user?.isAdmin,
@@ -64,19 +64,34 @@ export default function CampaignStatusPage() {
     const token = localStorage.getItem("token");
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api/v1";
 
-    const res = await fetch(`${apiUrl}/campaigns/${id}/participants/import`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
-      body: formData,
-    });
-    const result = await res.json();
+    try {
+      const res = await fetch(`${apiUrl}/campaigns/${id}/participants/import`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      const result = await res.json();
 
-    if (res.ok) {
-      toast.success(`Added ${result.participantsAdded} participants`);
-    } else {
-      toast.error(result.error);
+      if (res.ok) {
+        toast.success(`Added ${result.participantsAdded} participants`);
+      } else {
+        toast.error(result.error || "Upload failed");
+      }
+    } catch {
+      toast.error("Network error. Please try again.");
     }
   };
+
+  if (isError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50">
+        <div className="text-center">
+          <p className="text-destructive font-medium">Something went wrong</p>
+          <p className="text-sm text-muted-foreground mt-1">{error?.message}</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!status) return null;
 

@@ -24,7 +24,7 @@ export default function LoginPage() {
         method: "POST",
         body: JSON.stringify({ email }),
       });
-      login(res.token);
+      await login(res.token);
       router.push("/");
     } catch (err: any) {
       setError(err.message);
@@ -53,28 +53,32 @@ export default function LoginPage() {
             Sign in with Google
           </Button>
 
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">
-                Or dev login
-              </span>
-            </div>
-          </div>
+          {process.env.NODE_ENV !== "production" && (
+            <>
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">
+                    Or dev login
+                  </span>
+                </div>
+              </div>
 
-          <div className="flex gap-2">
-            <Input
-              placeholder="email@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleDevLogin()}
-            />
-            <Button variant="outline" onClick={handleDevLogin}>
-              Login
-            </Button>
-          </div>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="email@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleDevLogin()}
+                />
+                <Button variant="outline" onClick={handleDevLogin}>
+                  Login
+                </Button>
+              </div>
+            </>
+          )}
 
           {error && (
             <p className="text-sm text-destructive text-center">{error}</p>

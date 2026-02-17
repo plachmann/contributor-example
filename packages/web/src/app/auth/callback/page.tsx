@@ -12,8 +12,7 @@ function CallbackHandler() {
   useEffect(() => {
     const token = searchParams.get("token");
     if (token) {
-      login(token);
-      router.push("/");
+      login(token).then(() => router.push("/"));
     } else {
       router.push("/login");
     }

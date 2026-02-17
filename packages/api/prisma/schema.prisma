@@ -37,6 +37,7 @@ model Campaign {
   participants CampaignParticipant[]
   gifts        Gift[]
 
+  @@index([createdBy])
   @@map("campaigns")
 }
 
@@ -50,6 +51,8 @@ model CampaignParticipant {
   user     User     @relation(fields: [userId], references: [id])
 
   @@unique([campaignId, userId])
+  @@index([campaignId])
+  @@index([userId])
   @@map("campaign_participants")
 }
 
@@ -68,5 +71,8 @@ model Gift {
   recipient User     @relation("RecipientGifts", fields: [recipientId], references: [id])
 
   @@unique([campaignId, giverId, recipientId])
+  @@index([giverId])
+  @@index([recipientId])
+  @@index([campaignId])
   @@map("gifts")
 }

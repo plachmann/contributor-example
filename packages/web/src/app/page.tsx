@@ -1,34 +1,26 @@
 "use client";
 
 import { useAuth } from "@/lib/auth";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
 import { CampaignCard } from "@/components/campaign-card";
+import { RequireAuth } from "@/components/require-auth";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-
-interface Campaign {
-  id: string;
-  title: string;
-  description: string | null;
-  budgetPerUser: number;
-  openDate: string;
-  closeDate: string;
-  totalGifted: number;
-  remainingBudget: number;
-}
+import type { Campaign } from "@/lib/types";
 
 export default function DashboardPage() {
-  const { user, isLoading: authLoading, logout } = useAuth();
-  const router = useRouter();
+  return (
+    <RequireAuth>
+      <DashboardContent />
+    </RequireAuth>
+  );
+}
 
-  useEffect(() => {
-    if (!authLoading && !user) router.push("/login");
-  }, [user, authLoading, router]);
+function DashboardContent() {
+  const { user, logout } = useAuth();
 
-  const { data: campaigns, isLoading } = useQuery({
+  const { data: campaigns, isLoading, isError, error } = useQuery({
     queryKey: ["campaigns"],
     queryFn: async () => {
       const list = await apiFetch<Campaign[]>("/campaigns");
@@ -37,7 +29,18 @@ export default function DashboardPage() {
     enabled: !!user,
   });
 
-  if (authLoading || isLoading) {
+  if (isError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50">
+        <div className="text-center">
+          <p className="text-destructive font-medium">Something went wrong</p>
+          <p className="text-sm text-muted-foreground mt-1">{error?.message}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50">
         <p className="text-muted-foreground">Loading...</p>

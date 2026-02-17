@@ -64,7 +64,34 @@ async function main() {
     });
   }
 
-  console.log(`Seeded: ${allUsers.length} users, 1 campaign`);
+  // Create sample gifts
+  const giftData = [
+    { giverId: users[0].id, recipientId: users[1].id, amount: 2500, comment: "Great teamwork on the Q1 project!" },
+    { giverId: users[0].id, recipientId: users[2].id, amount: 1500, comment: "Thanks for helping with code reviews" },
+    { giverId: users[1].id, recipientId: users[0].id, amount: 3000, comment: "Amazing presentation last week!" },
+    { giverId: users[2].id, recipientId: users[3].id, amount: 2000, comment: "Thanks for mentoring me" },
+    { giverId: users[3].id, recipientId: users[4].id, amount: 1000, comment: "Great debugging help!" },
+    { giverId: users[4].id, recipientId: admin.id, amount: 5000, comment: "Outstanding leadership this quarter" },
+  ];
+
+  for (const gift of giftData) {
+    await prisma.gift.upsert({
+      where: {
+        campaignId_giverId_recipientId: {
+          campaignId: campaign.id,
+          giverId: gift.giverId,
+          recipientId: gift.recipientId,
+        },
+      },
+      update: {},
+      create: {
+        campaignId: campaign.id,
+        ...gift,
+      },
+    });
+  }
+
+  console.log(`Seeded: ${allUsers.length} users, 1 campaign, ${giftData.length} gifts`);
 }
 
 main()

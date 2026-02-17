@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
@@ -12,18 +11,10 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
-
-interface Campaign {
-  id: string;
-  title: string;
-  budgetPerUser: number;
-  openDate: string;
-  closeDate: string;
-}
+import type { Campaign } from "@/lib/types";
 
 export default function AdminPage() {
   const { user } = useAuth();
-  const router = useRouter();
   const queryClient = useQueryClient();
 
   const [title, setTitle] = useState("");
@@ -101,18 +92,29 @@ export default function AdminPage() {
               </div>
             </div>
             <Button
-              onClick={() =>
+              onClick={() => {
+                const budgetNum = parseFloat(budget);
+                if (isNaN(budgetNum) || budgetNum <= 0) {
+                  toast.error("Please enter a valid budget amount");
+                  return;
+                }
+                const openDateObj = new Date(openDate);
+                const closeDateObj = new Date(closeDate);
+                if (isNaN(openDateObj.getTime()) || isNaN(closeDateObj.getTime())) {
+                  toast.error("Please enter valid dates");
+                  return;
+                }
                 createCampaign.mutate({
                   title,
                   description: description || undefined,
-                  budgetPerUser: Math.round(parseFloat(budget) * 100),
-                  openDate: new Date(openDate).toISOString(),
-                  closeDate: new Date(closeDate).toISOString(),
-                })
-              }
-              disabled={!title || !budget || !openDate || !closeDate}
+                  budgetPerUser: Math.round(budgetNum * 100),
+                  openDate: openDateObj.toISOString(),
+                  closeDate: closeDateObj.toISOString(),
+                });
+              }}
+              disabled={!title || !budget || !openDate || !closeDate || createCampaign.isPending}
             >
-              Create Campaign
+              {createCampaign.isPending ? "Creating..." : "Create Campaign"}
             </Button>
           </CardContent>
         </Card>
