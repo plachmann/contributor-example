@@ -68,6 +68,11 @@ describe("Campaign routes", () => {
     expect(res.status).toBe(201);
     expect(res.body.title).toBe("Q4 Bonuses");
     expect(res.body.budgetPerUser).toBe(50000);
+
+    // Add admin as participant so list endpoint returns this campaign
+    await prisma.campaignParticipant.create({
+      data: { campaignId: res.body.id, userId: res.body.createdBy },
+    });
   });
 
   it("lists campaigns for authenticated users", async () => {

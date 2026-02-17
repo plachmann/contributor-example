@@ -1,6 +1,6 @@
 import dotenv from "dotenv";
 import path from "path";
-dotenv.config({ path: path.resolve(__dirname, "../../.env") });
+dotenv.config({ path: path.resolve(__dirname, "../../../.env") });
 import "express-async-errors";
 import express, { type Express } from "express";
 import cors from "cors";
