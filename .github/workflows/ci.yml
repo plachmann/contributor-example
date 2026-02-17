@@ -18,6 +18,8 @@ jobs:
           node-version: 20
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: npx prisma generate
+        working-directory: packages/api
       - run: pnpm lint
 
   build:
@@ -31,6 +33,8 @@ jobs:
           node-version: 20
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: npx prisma generate
+        working-directory: packages/api
       - run: pnpm build
         env:
           NEXT_PUBLIC_API_URL: http://localhost:3001/api/v1
@@ -60,6 +64,9 @@ jobs:
           node-version: 20
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Generate Prisma client
+        run: npx prisma generate
+        working-directory: packages/api
       - name: Run migrations
         run: npx prisma migrate deploy
         working-directory: packages/api
