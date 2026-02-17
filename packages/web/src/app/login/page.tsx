@@ -26,8 +26,8 @@ export default function LoginPage() {
       });
       await login(res.token);
       router.push("/");
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Login failed");
     }
   };
 
